@@ -3,24 +3,41 @@ import api from '../utils/api';
 
 const AuthContext = createContext(null);
 
+const clearStoredAuth = () => {
+  localStorage.removeItem('tf_token');
+  localStorage.removeItem('tf_user');
+};
+
+const getStoredUser = () => {
+  const savedUser = localStorage.getItem('tf_user');
+  if (!savedUser || savedUser === 'undefined' || savedUser === 'null') return null;
+
+  try {
+    return JSON.parse(savedUser);
+  } catch (err) {
+    clearStoredAuth();
+    return null;
+  }
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('tf_token');
-    const savedUser = localStorage.getItem('tf_user');
+    const savedUser = getStoredUser();
     if (token && savedUser) {
-      setUser(JSON.parse(savedUser));
+      setUser(savedUser);
       api.get('/auth/me').then(res => {
         setUser(res.data.user);
         localStorage.setItem('tf_user', JSON.stringify(res.data.user));
       }).catch(() => {
-        localStorage.removeItem('tf_token');
-        localStorage.removeItem('tf_user');
+        clearStoredAuth();
         setUser(null);
       }).finally(() => setLoading(false));
     } else {
+      clearStoredAuth();
       setLoading(false);
     }
   }, []);
@@ -28,7 +45,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
     localStorage.setItem('tf_token', res.data.token);
-    localStorage.setItem('tf_user', JSON.stringify(res.data.user));
+    if (res.data.user) localStorage.setItem('tf_user', JSON.stringify(res.data.user));
     setUser(res.data.user);
     return res.data;
   };
@@ -36,14 +53,13 @@ export const AuthProvider = ({ children }) => {
   const signup = async (name, email, password) => {
     const res = await api.post('/auth/signup', { name, email, password });
     localStorage.setItem('tf_token', res.data.token);
-    localStorage.setItem('tf_user', JSON.stringify(res.data.user));
+    if (res.data.user) localStorage.setItem('tf_user', JSON.stringify(res.data.user));
     setUser(res.data.user);
     return res.data;
   };
 
   const logout = () => {
-    localStorage.removeItem('tf_token');
-    localStorage.removeItem('tf_user');
+    clearStoredAuth();
     setUser(null);
   };
 
