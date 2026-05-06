@@ -51,8 +51,19 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({ message: err.message || 'Internal Server Error' });
 });
 
-if (!process.env.MONGODB_URI) {
-  console.error('Missing MONGODB_URI. Create backend/.env and set MONGODB_URI to your MongoDB connection string.');
+const mongoUri = process.env.MONGODB_URI
+  || process.env.MONGO_URI
+  || process.env.MONGO_URL
+  || process.env.DATABASE_URL;
+
+if (!mongoUri) {
+  const availableMongoEnvKeys = Object.keys(process.env)
+    .filter(key => /mongo|database/i.test(key))
+    .sort();
+
+  console.error('Missing MongoDB connection string.');
+  console.error('Set MONGODB_URI in your backend service environment variables.');
+  console.error(`Mongo-related env keys found: ${availableMongoEnvKeys.length ? availableMongoEnvKeys.join(', ') : 'none'}`);
   process.exit(1);
 }
 
@@ -74,7 +85,7 @@ const printMongoConnectionHelp = err => {
     : [];
 
   console.error('MongoDB connection failed.');
-  console.error(`URI: ${getSafeMongoUriDetails(process.env.MONGODB_URI)}`);
+  console.error(`URI: ${getSafeMongoUriDetails(mongoUri)}`);
   console.error(`Reason: ${err.message}`);
 
   if (serverMessages.length) {
@@ -85,7 +96,7 @@ const printMongoConnectionHelp = err => {
   console.error('Check that your current public IP is allowed in MongoDB Atlas Network Access and that the database user/password are correct.');
 };
 
-mongoose.connect(process.env.MONGODB_URI, {
+mongoose.connect(mongoUri, {
   family: 4,
   serverSelectionTimeoutMS: 10000
 })
