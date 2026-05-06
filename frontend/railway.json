@@ -6,6 +6,6 @@
   },
   "deploy": {
     "staticDir": "build",
-    "startCommand": "npx serve -s build -l $PORT"
+    "startCommand": "serve -s /app/build -l tcp://0.0.0.0:${PORT:-3000}"
   }
 }
